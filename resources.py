@@ -89,7 +89,6 @@ class BookListResources(Resource):
                 response = db.session.scalars(db.select(Book.rating)).all()
                 return response
             elif argument == 'sorted':
-                print("here")
                 response = db.session.scalars(db.select(Book).order_by(Book.rating)).all()
                 return [element.serialize() for element in response]
             else:
