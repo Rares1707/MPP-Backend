@@ -1,80 +1,134 @@
-import unittest
+from unittest import TestCase
+from unittest import main
+from flask import Flask
+from flask_restful import Api
 from Backend.resources import *
+import os
+from flask_cors import CORS
 
 
-class TestRepository(unittest.TestCase):
-    def test_add_to_repo(self):
-        data.clear()
-        data.insert(Book("Book 1", 5))
-        data.insert(Book("Book 2", 2))
-        unittest.TestCase.assertEqual(self, len(data.get_all()), 2)
-
-    def test_remove_from_repo(self):
-        data.clear()
-        data.insert(Book("Book 1", 5))
-        data.insert(Book("Book 2", 2))
-        data.remove(1)
-        unittest.TestCase.assertEqual(self, len(data.get_all()), 1)
-        unittest.TestCase.assertEqual(self, data.get(1), None)
-
-    def test_update_repo(self):
-        data.clear()
-        data.insert(Book("Book 1", 5))
-        data.insert(Book("Book 2", 2))
-        book = data.get(1)
-        unittest.TestCase.assertEqual(self, book.title, "Book 1")
-        unittest.TestCase.assertEqual(self, book.rating, 5)
-
-
-class TestService(unittest.TestCase):
+class TestApi(TestCase):
     def setUp(self):
         self.app = Flask(__name__)
         self.app.config['TESTING'] = True
+
+        self.pathOfCurrentDirectory = os.path.abspath(os.path.dirname(__file__))
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(self.pathOfCurrentDirectory, 'testDatabase.db')  # this configures the database connection string
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+        CORS(self.app)
         self.api = Api(self.app)
 
-        self.api.add_resource(BookListResources, '/books/<arguments>')
+        self.db = db
+
+        self.db.init_app(self.app)
+
+        self.api.add_resource(BookListResources, '/books/<argument>')
         self.api.add_resource(BookResource, '/book/<id>')
+        self.api.add_resource(CharacterListResources, '/characters/<argument>')
+        self.api.add_resource(CharacterResource, '/character/<id>')
+        self.api.add_resource(PingResource, '/ping')
+
+        with self.app.app_context():
+            self.db.create_all()
+            self.db.session.commit()
+
+    def tearDown(self):
+        # doesn't work because the file PyCharm is using the file
+        #os.remove(os.path.join(self.pathOfCurrentDirectory, 'testDatabase.db'))
+        with self.app.app_context():
+            self.db.session.query(Character).delete()
+            self.db.session.query(Book).delete()
+            self.db.session.commit()
 
     def test_get_all_books(self):
-        self.setUp()
-        data.clear()
         with self.app.test_client() as client:
-            response = client.get('/books/nothing')
-            unittest.TestCase.assertEqual(self, response.status_code, 200)
-            unittest.TestCase.assertEqual(self, response.json, [])
+            response = client.get('/books/optionalArgument')
+            TestCase.assertEqual(self, response.status_code, 200)
+            TestCase.assertEqual(self, response.json, [])
+
+    def test_get_all_characters(self):
+        with self.app.test_client() as client:
+            response = client.get('/characters/optionalArgument')
+            TestCase.assertEqual(self, response.status_code, 200)
+            TestCase.assertEqual(self, response.json, [])
 
     def test_add_book(self):
-        self.setUp()
-        data.clear()
         with self.app.test_client() as client:
             response = client.post('/books/nothing', json={"title": "book", "rating": 4})
-            unittest.TestCase.assertEqual(self, response.status_code, 200)
-            unittest.TestCase.assertEqual(self, len(data.get_all()), 1)
+            TestCase.assertEqual(self, response.status_code, 200)
+            x = self.db.session.scalars(db.select(Book)).all()
+            TestCase.assertEqual(self, len(x), 1)
+
+    def test_add_character(self):
+        with self.app.test_client() as client:
+            client.post('/books/nothing', json={"title": "book", "rating": 4})
+            response = client.post('/characters/nothing', json={"name": "character", "book_id": 1})
+            TestCase.assertEqual(self, response.status_code, 200)
+            x = self.db.session.scalars(db.select(Book)).all()
+            TestCase.assertEqual(self, len(x), 1)
 
     def test_get_book(self):
-        data.insert(Book("Book 1", 5))
-        with self.app.test_client() as client:
-            response = client.get('/book/1')
-            unittest.TestCase.assertEqual(self, response.status_code, 200)
-            unittest.TestCase.assertEqual(self, response.json, {"id": 1, "title": "Book 1", "rating": 5})
+        with self.app.app_context():
+            self.db.session.add(Book(title="asda", rating=3))
+            db.session.commit()
+            with self.app.test_client() as client:
+                response = client.get('/book/1')
+                TestCase.assertEqual(self, response.status_code, 200)
+                TestCase.assertEqual(self, {"id": 1, "title": "asda", "rating": 3}, response.json)
+
+    def test_get_character(self):
+        with self.app.app_context():
+            self.db.session.add(Book(title="asda", rating=3))
+            self.db.session.add(Character(name="c", book_id=1))
+            db.session.commit()
+            with self.app.test_client() as client:
+                response = client.get('/character/1')
+                TestCase.assertEqual(self, response.status_code, 200)
+                TestCase.assertEqual(self, {"id": 1, "name": "c", "book_id": 1}, response.json)
 
     def test_update_book(self):
-        data.insert(Book("book", 5))
+        with self.app.app_context():
+            self.db.session.add(Book(title="book", rating=5))
+            db.session.commit()
         with self.app.test_client() as client:
             response = client.put('/book/1', json={"title": "book1", "rating": 3})
-            print(response)
-            unittest.TestCase.assertEqual(self, response.status_code, 200)
-            book = data.get(1)
-            unittest.TestCase.assertEqual(self, book.title, "book1")
-            unittest.TestCase.assertEqual(self, book.rating, 3)
+            TestCase.assertEqual(self, response.status_code, 200)
+            book = db.session.scalars(db.select(Book).where(Book.id == 1)).first()
+            TestCase.assertEqual(self, book.title, "book1")
+            TestCase.assertEqual(self, book.rating, 3)
+
+    def test_update_character(self):
+        with self.app.app_context():
+            self.db.session.add(Book(title="book", rating=5))
+            self.db.session.add(Book(title="book2", rating=5))
+            self.db.session.add(Character(name="c", book_id=1))
+            db.session.commit()
+        with self.app.test_client() as client:
+            response = client.put('/character/1', json={"name": "c2", "book_id": 2})
+            TestCase.assertEqual(self, response.status_code, 200)
+            character = db.session.scalars(db.select(Character).where(Character.id == 1)).first()
+            TestCase.assertEqual(self, character.name, "c2")
+            TestCase.assertEqual(self, character.book_id, 2)
 
     def test_delete_book(self):
+        with self.app.app_context():
+            self.db.session.add(Book(title="book", rating=5))
+            db.session.commit()
         with self.app.test_client() as client:
             response = client.delete('/book/1')
-            unittest.TestCase.assertEqual(self, response.status_code, 200)
-            unittest.TestCase.assertEqual(self, len(data.get_all()), 0)
+            TestCase.assertEqual(self, response.status_code, 200)
+            TestCase.assertEqual(self, len(db.session.scalars(db.select(Book)).all()), 0)
 
-
+    def test_delete_book(self):
+        with self.app.app_context():
+            self.db.session.add(Book(title="book", rating=5))
+            self.db.session.add(Character(name="c", book_id=1))
+            db.session.commit()
+        with self.app.test_client() as client:
+            response = client.delete('/character/1')
+            TestCase.assertEqual(self, response.status_code, 200)
+            TestCase.assertEqual(self, len(db.session.scalars(db.select(Character)).all()), 0)
 
 if __name__ == "__main__":
-    unittest.main()
+    main()

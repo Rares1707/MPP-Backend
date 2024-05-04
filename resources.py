@@ -17,16 +17,16 @@ class BookResource(Resource):
     def delete(self, id):
         id = int(id)
         #check_if_book_exists(id)
-        book = Book.query.get(id)
+        book = db.session.scalars(db.select(Book).where(Book.id == id)).first()
         db.session.delete(book)
         db.session.commit()
         return simple_message_response("Book with ID {} has been deleted.".format(id), 200)
 
     def get(self, id):
         id = int(id)
-        response = db.session.scalars(db.select(Book).where(Book.id == id))
-        #check_if_book_exists(id)
-        response = [element.serialize() for element in response]
+        response = db.session.scalars(db.select(Book).where(Book.id == id)).first()
+        print(response)
+        response = response.serialize()
         print(response)
         return response
 
@@ -36,7 +36,7 @@ class BookResource(Resource):
         args = bookParser.parse_args()
         print(args)
 
-        book = db.session.query(Book).get(id)  # Replace 'book_id' with the actual ID
+        book = db.session.scalars(db.select(Book).where(Book.id == id)).first()
         book.title = args['title']
         book.rating = args['rating']
         db.session.commit()
@@ -45,8 +45,8 @@ class BookResource(Resource):
 class CharacterResource(Resource):
     def get(self, id):
         id = int(id)
-        response = db.session.scalars(db.select(Character).where(Character.id == id))
-        response = [element.serialize() for element in response]
+        response = db.session.scalars(db.select(Character).where(Character.id == id)).first()
+        response = response.serialize()
         print(response)
         return response
 
@@ -55,7 +55,7 @@ class CharacterResource(Resource):
         args = characterParser.parse_args()
         print(args)
 
-        character = db.session.query(Character).get(id)
+        character = db.session.scalars(db.select(Character).where(Character.id == id)).first()
         character.name = args['name']
         character.book_id = args['book_id']
         print(character.book)
@@ -64,7 +64,7 @@ class CharacterResource(Resource):
 
     def delete(self, id):
         id = int(id)
-        character = Character.query.get(id)
+        character = db.session.scalars(db.select(Character).where(Character.id == id)).first()
         db.session.delete(character)
         db.session.commit()
         return simple_message_response("Character with ID {} has been deleted.".format(id), 200)
@@ -89,6 +89,7 @@ class BookListResources(Resource):
                 response = db.session.scalars(db.select(Book.rating)).all()
                 return response
             elif argument == 'sorted':
+                print("here")
                 response = db.session.scalars(db.select(Book).order_by(Book.rating)).all()
                 return [element.serialize() for element in response]
             else:

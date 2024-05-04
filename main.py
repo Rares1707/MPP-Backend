@@ -16,14 +16,11 @@ api = Api(app)
 
 db.init_app(app)
 
-CORS(app)
-
 api.add_resource(BookListResources, '/books/<argument>')
 api.add_resource(BookResource, '/book/<id>')
 api.add_resource(CharacterListResources, '/characters/<argument>')
 api.add_resource(CharacterResource, '/character/<id>')
 api.add_resource(PingResource, '/ping')
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
