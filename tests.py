@@ -1,5 +1,5 @@
 import unittest
-from projectFiles.resources import *
+from Backend.resources import *
 
 
 class TestRepository(unittest.TestCase):

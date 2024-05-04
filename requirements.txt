@@ -1,0 +1,4 @@
+Flask==3.0.2
+flask_restful==0.3.10
+Faker==24.9.0
+flask-sqlalchemy==3.1.1
