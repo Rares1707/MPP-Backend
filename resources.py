@@ -1,8 +1,10 @@
 import flask
 from flask_restful import Resource
-from Backend.repository import *
-from Backend.Model import *
-from Backend.auxiliary import *
+from repository import *
+from Model import *
+from auxiliary import *
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_cors import cross_origin
 
 data = Repository()
 
@@ -14,6 +16,7 @@ def check_if_book_exists(id):
 
 
 class BookResource(Resource):
+    method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
     def delete(self, id):
         id = int(id)
         #check_if_book_exists(id)
@@ -43,6 +46,7 @@ class BookResource(Resource):
         return simple_message_response("Book with ID {} has been updated.".format(id), 200)
 
 class CharacterResource(Resource):
+    method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
     def get(self, id):
         id = int(id)
         response = db.session.scalars(db.select(Character).where(Character.id == id)).first()
@@ -73,12 +77,16 @@ class CharacterResource(Resource):
 
 # This is the resource that will be used to handle multiple books.
 class BookListResources(Resource):
+    #method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
+    #method_decorators = [cross_origin(headers=['Content-Type', 'Authorization'])]
+    #method_decorators = [jwt_required]
     def post(self, argument):
         args = bookParser.parse_args()
         response = db.session.add(Book(title=args['title'], rating=args['rating']))
         db.session.commit()
         return response
 
+    #@cross_origin(supports_credentials=True)
     def get(self, argument):
         try:
             response = None
@@ -100,6 +108,7 @@ class BookListResources(Resource):
 
 
 class CharacterListResources(Resource):
+    method_decorators = [jwt_required, cross_origin(headers=['Content-Type','Authorization'])]
     def post(self, argument):
         args = characterParser.parse_args()
         response = db.session.add(Character(name=args['name'], book_id=args['book_id']))
@@ -117,6 +126,21 @@ class CharacterListResources(Resource):
 class PingResource(Resource):
     def get(self):
         return simple_message_response("Ping successfully delivered", 200)
+
+class UserResource(Resource):
+    method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
+    def post(self):
+        args = userParser.parse_args()
+        response = db.session.add(User(username=args['username'], password=args['password']))
+        db.session.commit()
+        return response
+
+    def get(self):
+        id = get_jwt_identity()
+        response = db.session.scalars(db.select(User).where(User.id == id)).first()
+        response = response.serialize()
+        print(response)
+        return response
 
 
 def jsonify_and_add_proper_header(response):

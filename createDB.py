@@ -1,4 +1,4 @@
-from main import db, app
+from app import db, app
 from Model import Book
 
 if __name__=="__main__":

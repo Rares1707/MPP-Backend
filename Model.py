@@ -1,11 +1,9 @@
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
-from sqlalchemy import String
+from datetime import datetime
+
+from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
+from sqlalchemy import String, DateTime, ForeignKey
 from typing import List
 from flask_restful import reqparse
-from sqlalchemy.orm import relationship
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import DeclarativeBase
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -22,6 +20,10 @@ bookParser.add_argument('rating', type=float)
 characterParser = reqparse.RequestParser()
 characterParser.add_argument('name', type=str)
 characterParser.add_argument('book_id')
+
+userParser = reqparse.RequestParser()
+userParser.add_argument('username', type=str)
+userParser.add_argument('password', type=str)
 
 class Book(db.Model):
     __tablename__ = 'books_table'
@@ -72,3 +74,27 @@ class Character(db.Model):
         self.book_id = other.book_id
         self.book = other.book
 
+
+class User(db.Model):
+    __tablename__ = 'users_table'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    password: Mapped[str] = mapped_column(String(50), nullable=False)
+    dateCreated: Mapped[datetime] = mapped_column(DateTime, default=datetime.today())
+
+    def __repr__(self) -> str:
+        return f"User(id={self.id!r}, username={self.username!r}, password={self.password!r}, dateCreated={self.dateCreated!r})"
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "password": self.password,
+            "dateCreated": self.dateCreated
+        }
+
+    def deep_copy(self, other):
+        self.id = other.id
+        self.username = other.username
+        self.password = other.password
+        self.dateCreated = other.dateCreated

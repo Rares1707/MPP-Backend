@@ -1,4 +1,4 @@
-from Backend.Model import Book
+from Model import Book
 
 
 class Repository:
