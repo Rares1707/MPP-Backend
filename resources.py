@@ -4,8 +4,9 @@ from repository import *
 from Model import *
 from auxiliary import *
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from flask_cors import cross_origin
 
+
+# not needed anymore
 data = Repository()
 
 
@@ -15,8 +16,11 @@ def check_if_book_exists(id):
         simple_message_error("Book with ID {} doesn't exist.".format(id))
 
 
+# DON'T USE method_decorators = [jwt_required()] FOR ANY OF THE RESOURCES
+# BECAUSE IT WILL OVERRIDE THE OTHER HEADERS (SUCH AS THE CORS HEADER)
+
 class BookResource(Resource):
-    method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
+    @jwt_required()
     def delete(self, id):
         id = int(id)
         #check_if_book_exists(id)
@@ -24,7 +28,7 @@ class BookResource(Resource):
         db.session.delete(book)
         db.session.commit()
         return simple_message_response("Book with ID {} has been deleted.".format(id), 200)
-
+    @jwt_required()
     def get(self, id):
         id = int(id)
         response = db.session.scalars(db.select(Book).where(Book.id == id)).first()
@@ -32,7 +36,7 @@ class BookResource(Resource):
         response = response.serialize()
         print(response)
         return response
-
+    @jwt_required()
     def put(self, id):
         id = int(id)
         #check_if_book_exists(id)
@@ -46,14 +50,14 @@ class BookResource(Resource):
         return simple_message_response("Book with ID {} has been updated.".format(id), 200)
 
 class CharacterResource(Resource):
-    method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
+    @jwt_required()
     def get(self, id):
         id = int(id)
         response = db.session.scalars(db.select(Character).where(Character.id == id)).first()
         response = response.serialize()
         print(response)
         return response
-
+    @jwt_required()
     def put(self, id):
         id = int(id)
         args = characterParser.parse_args()
@@ -65,7 +69,7 @@ class CharacterResource(Resource):
         print(character.book)
         db.session.commit()
         return simple_message_response(f"Character with ID {id} has been updated.")
-
+    @jwt_required()
     def delete(self, id):
         id = int(id)
         character = db.session.scalars(db.select(Character).where(Character.id == id)).first()
@@ -77,16 +81,14 @@ class CharacterResource(Resource):
 
 # This is the resource that will be used to handle multiple books.
 class BookListResources(Resource):
-    #method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
-    #method_decorators = [cross_origin(headers=['Content-Type', 'Authorization'])]
-    #method_decorators = [jwt_required]
+    @jwt_required()
     def post(self, argument):
         args = bookParser.parse_args()
         response = db.session.add(Book(title=args['title'], rating=args['rating']))
         db.session.commit()
         return response
 
-    #@cross_origin(supports_credentials=True)
+    @jwt_required()
     def get(self, argument):
         try:
             response = None
@@ -108,13 +110,13 @@ class BookListResources(Resource):
 
 
 class CharacterListResources(Resource):
-    method_decorators = [jwt_required, cross_origin(headers=['Content-Type','Authorization'])]
+    @jwt_required()
     def post(self, argument):
         args = characterParser.parse_args()
         response = db.session.add(Character(name=args['name'], book_id=args['book_id']))
         db.session.commit()
         return response
-
+    @jwt_required()
     def get(self, argument):
         try:
             response = db.session.scalars(db.select(Character)).all()
@@ -128,7 +130,6 @@ class PingResource(Resource):
         return simple_message_response("Ping successfully delivered", 200)
 
 class UserResource(Resource):
-    method_decorators = [jwt_required, cross_origin(headers=['Content-Type', 'Authorization'])]
     def post(self):
         args = userParser.parse_args()
         response = db.session.add(User(username=args['username'], password=args['password']))

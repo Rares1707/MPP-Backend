@@ -21,6 +21,7 @@ CORS(app, resources={r"/*": {"origins": "*"}},
      support_credentials=True,
      headers=['Content-Type', 'Authorization'])
 
+
 @app.route('/')
 def home():
     return "Backend server is running!"
@@ -41,6 +42,7 @@ def login():
     else:
         return jsonify({'message': 'Login Failed'}), 401
 
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -57,6 +59,16 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         return jsonify({'message': 'User registered successfully'})
+
+
+@app.route('/userCreationDate', methods=['GET'])
+@jwt_required()
+def getUserCreationDate():
+    id = get_jwt_identity()
+    user = db.session.scalars(db.select(User).where(User.id == id)).first()
+    response = jsonify(user.dateCreated)
+    print(response)
+    return response
 
 
 api = Api(app)
