@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
-from sqlalchemy import String, DateTime, ForeignKey
+from sqlalchemy import String, DateTime, ForeignKey, Boolean
 from typing import List
 from flask_restful import reqparse
 from flask_sqlalchemy import SQLAlchemy
@@ -16,6 +16,7 @@ db = SQLAlchemy(model_class=Base)
 bookParser = reqparse.RequestParser()
 bookParser.add_argument('title', type=str)
 bookParser.add_argument('rating', type=float)
+bookParser.add_argument('user_id', type=int)
 
 characterParser = reqparse.RequestParser()
 characterParser.add_argument('name', type=str)
@@ -24,6 +25,7 @@ characterParser.add_argument('book_id')
 userParser = reqparse.RequestParser()
 userParser.add_argument('username', type=str)
 userParser.add_argument('password', type=str)
+userParser.add_argument('is_admin', type=bool)
 
 class Book(db.Model):
     __tablename__ = 'books_table'
@@ -33,8 +35,11 @@ class Book(db.Model):
 
     characters: Mapped[List["Character"]] = relationship(back_populates="book", cascade="all, delete-orphan")
 
+    user_id: Mapped[int] = mapped_column(ForeignKey("users_table.id"))
+    user: Mapped["User"] = relationship(back_populates="books")
+
     def __repr__(self) -> str:
-        return f"Book(id={self.id!r}, title={self.title!r}, rating={self.rating!r})"
+        return f"Book(id={self.id!r}, title={self.title!r}, rating={self.rating!r}, user_id={self.user_id!r})"
 
     def serialize(self):
         return {
@@ -81,9 +86,12 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     password: Mapped[str] = mapped_column(String(50), nullable=False)
     dateCreated: Mapped[datetime] = mapped_column(DateTime, default=datetime.today())
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    books: Mapped[List["Book"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
-        return f"User(id={self.id!r}, username={self.username!r}, password={self.password!r}, dateCreated={self.dateCreated!r})"
+        return f"User(id={self.id!r}, username={self.username!r}, password={self.password!r}, dateCreated={self.dateCreated!r}, is_admin={self.is_admin!r})"
 
     def serialize(self):
         return {
@@ -98,3 +106,5 @@ class User(db.Model):
         self.username = other.username
         self.password = other.password
         self.dateCreated = other.dateCreated
+
+

@@ -22,32 +22,47 @@ def check_if_book_exists(id):
 class BookResource(Resource):
     @jwt_required()
     def delete(self, id):
-        id = int(id)
+        book_id = int(id)
+        user_id = get_jwt_identity()
+        user = db.session.scalars(db.select(User).where(User.id == user_id)).first()
         #check_if_book_exists(id)
-        book = db.session.scalars(db.select(Book).where(Book.id == id)).first()
-        db.session.delete(book)
-        db.session.commit()
-        return simple_message_response("Book with ID {} has been deleted.".format(id), 200)
+        book = db.session.scalars(db.select(Book).where(Book.id == book_id)).first()
+        if user.is_admin or book.user_id == user_id:
+            db.session.delete(book)
+            db.session.commit()
+            return simple_message_response("Book with ID {} has been deleted.".format(book_id), 200)
+        return simple_message_response("Book with ID {} has not been deleted.".format(book_id), 200)
+
     @jwt_required()
     def get(self, id):
-        id = int(id)
-        response = db.session.scalars(db.select(Book).where(Book.id == id)).first()
-        print(response)
-        response = response.serialize()
-        print(response)
-        return response
+        book_id = int(id)
+        user_id = get_jwt_identity()
+        user = db.session.scalars(db.select(User).where(User.id == user_id)).first()
+        book = db.session.scalars(db.select(Book).where(Book.id == book_id)).first()
+
+        if user.is_admin or book.user_id == user_id:
+            response = book.serialize()
+            return response
+        return simple_message_error("You are not allowed to access this book.", 401)
+
     @jwt_required()
     def put(self, id):
-        id = int(id)
+        #print('here')
+        book_id = int(id)
         #check_if_book_exists(id)
         args = bookParser.parse_args()
         print(args)
 
-        book = db.session.scalars(db.select(Book).where(Book.id == id)).first()
-        book.title = args['title']
-        book.rating = args['rating']
-        db.session.commit()
-        return simple_message_response("Book with ID {} has been updated.".format(id), 200)
+        user_id = get_jwt_identity()
+        user = db.session.scalars(db.select(User).where(User.id == user_id)).first()
+
+        book = db.session.scalars(db.select(Book).where(Book.id == book_id)).first()
+        if user.is_admin or book.user_id == user_id:
+            book.title = args['title']
+            book.rating = args['rating']
+            db.session.commit()
+            return simple_message_response("Book with ID {} has been updated.".format(book_id), 200)
+        return simple_message_error("You are not allowed to update this book.", 401)
 
 class CharacterResource(Resource):
     @jwt_required()
@@ -84,26 +99,50 @@ class BookListResources(Resource):
     @jwt_required()
     def post(self, argument):
         args = bookParser.parse_args()
-        response = db.session.add(Book(title=args['title'], rating=args['rating']))
+        user_id = get_jwt_identity()
+        response = db.session.add(Book(title=args['title'], rating=args['rating'], user_id=user_id))
         db.session.commit()
         return response
 
     @jwt_required()
     def get(self, argument):
+        user_id = get_jwt_identity()
+        user = db.session.scalars(db.select(User).where(User.id == user_id)).first()
+        print(user)
         try:
             response = None
-            if argument == 'titles':
+            if argument == 'titles' and user.is_admin:
                 response = db.session.scalars(db.select(Book.title)).all()
                 return response
-            elif argument == 'ratings':
+            elif argument == 'titles' and not user.is_admin:
+                response = db.session.scalars(db.select(Book.title).where(Book.user_id == user_id)).all()
+                return response
+
+            elif argument == 'ratings' and user.is_admin:
+                print(user.is_admin)
                 response = db.session.scalars(db.select(Book.rating)).all()
                 return response
-            elif argument == 'sorted':
+            elif argument == 'ratings' and not user.is_admin:
+                response = db.session.scalars(db.select(Book.rating).where(Book.user_id == user_id)).all()
+                return response
+
+            elif argument == 'sorted' and user.is_admin:
                 response = db.session.scalars(db.select(Book).order_by(Book.rating)).all()
                 print(response)
                 return [element.serialize() for element in response]
-            else:
+            elif argument == 'sorted' and not user.is_admin:
+                response = db.session.scalars(db.select(Book).
+                                              where(Book.user_id == user_id).
+                                              order_by(Book.rating)).all()
+                print(response)
+                return [element.serialize() for element in response]
+
+            elif user.is_admin:
+                print('here')
                 response = db.session.scalars(db.select(Book)).all()
+                return [element.serialize() for element in response]
+            elif not user.is_admin:
+                response = db.session.scalars(db.select(Book).where(Book.user_id == user_id)).all()
                 return [element.serialize() for element in response]
         except Exception as error:
             return simple_message_error(f"Error on fetch books: {error}")
