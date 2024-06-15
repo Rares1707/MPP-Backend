@@ -2,25 +2,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_restful import Api
 from resources import *
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from flask_jwt_extended import jwt_required, create_access_token
 from flask_bcrypt import check_password_hash
-import os
-
-app = Flask(__name__)
-
-pathOfCurrentDirectory = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(pathOfCurrentDirectory, 'myDatabase.db') # this configures the database connection string
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-app.config['SECRET_KEY'] = 'bad_secret_key'
-app.config["JWT_SECRET_KEY"] = 'bad_jwt_secret_key'
-app.config['JWT_TOKEN_LOCATION'] = ['headers']
-
-#CORS(app)
-CORS(app, resources={r"/*": {"origins": "*"}},
-     support_credentials=True,
-     headers=['Content-Type', 'Authorization'])
-
+from app_initialization import socketio, api, app
 
 @app.route('/')
 def home():
@@ -71,13 +55,12 @@ def getUserCreationDate():
     return response
 
 
-api = Api(app)
 
-db.init_app(app)
+#socketio = SocketIO(cors_allowed_origins="*") #if 'socketio' not in locals() else socketio
 
-jwt = JWTManager(app)
 
-api.add_resource(BookListResources, '/books/<argument>')
+#api.add_resource(BookListResources, '/books?type=<type>&page=<page>&pageSize=<pageSize>')
+api.add_resource(BookListResources, '/books')
 api.add_resource(BookResource, '/book/<id>')
 api.add_resource(CharacterListResources, '/characters/<argument>')
 api.add_resource(CharacterResource, '/character/<id>')
@@ -88,6 +71,7 @@ api.add_resource(PingResource, '/ping')
 #     db.session.commit()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True, port=5000)
+    #app.run(debug=True, port=5000)
 
 
