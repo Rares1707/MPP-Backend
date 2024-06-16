@@ -5,6 +5,8 @@ from sqlalchemy import String, DateTime, ForeignKey, Boolean
 from typing import List
 from flask_restful import reqparse
 from flask_sqlalchemy import SQLAlchemy
+from faker import Faker
+from random import choice
 
 
 class Base(DeclarativeBase):
@@ -27,6 +29,8 @@ userParser.add_argument('username', type=str)
 userParser.add_argument('password', type=str)
 userParser.add_argument('is_admin', type=bool)
 
+myFaker = Faker()
+
 class Book(db.Model):
     __tablename__ = 'books_table'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -37,6 +41,9 @@ class Book(db.Model):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users_table.id"))
     user: Mapped["User"] = relationship(back_populates="books")
+
+    MINIMUM_RATING = 1
+    MAXIMUM_RATING = 5
 
     def __repr__(self) -> str:
         return f"Book(id={self.id!r}, title={self.title!r}, rating={self.rating!r}, user_id={self.user_id!r})"
@@ -53,6 +60,11 @@ class Book(db.Model):
         self.title = other.title
         self.rating = other.rating
         self.characters = other.characters
+
+    @staticmethod
+    def generate_fake(thisClass):
+        return Book(title=myFaker.name(), rating=myFaker.random_int(thisClass.MINIMUM_RATING, thisClass.MAXIMUM_RATING),
+                    user_id=1)
 
 
 class Character(db.Model):
@@ -79,6 +91,11 @@ class Character(db.Model):
         self.book_id = other.book_id
         self.book = other.book
 
+    @staticmethod
+    def generate_fake(): #this becomes way too slow if there are many books
+        books = db.session.scalars(db.select(Book)).all()
+        book_ids = [book.id for book in books]
+        return Character(name=myFaker.name(), book_id=choice(book_ids))
 
 class User(db.Model):
     __tablename__ = 'users_table'

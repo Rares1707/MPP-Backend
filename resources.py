@@ -120,7 +120,7 @@ def getTypeOfGetRequest():
 # This is the resource that will be used to handle multiple books.
 class BookListResources(Resource):
     @jwt_required()
-    def post(self, argument):
+    def post(self):
         args = bookParser.parse_args()
         print(args)
         user_id = get_jwt_identity()
