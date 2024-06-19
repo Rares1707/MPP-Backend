@@ -3,7 +3,7 @@ from flask_cors import CORS
 from flask_restful import Api
 from resources import *
 from flask_jwt_extended import jwt_required, create_access_token
-from flask_bcrypt import check_password_hash
+from flask_bcrypt import check_password_hash, generate_password_hash
 from app_initialization import socketio, api, app
 
 @app.route('/')
@@ -20,7 +20,7 @@ def login():
 
     user = db.session.scalars(db.select(User).where(User.username == username)).first()
 
-    if user and user.password == password: #check_password_hash(user.password, password):
+    if user and check_password_hash(user.password, password):
         access_token = create_access_token(identity=user.id)
         return jsonify({'message': 'Login Success', 'access_token': access_token})
     else:
@@ -36,10 +36,11 @@ def register():
 
     user = db.session.scalars(db.select(User).where(User.username == username)).first()
 
-    if user: #check_password_hash(user.password, password):
+    if user:
         return jsonify({'message': 'Login Failed: username not available'}), 401
     else:
-        new_user = User(username=username, password=password)
+        encrypted_password = generate_password_hash(password)
+        new_user = User(username=username, password=encrypted_password)
         db.session.add(new_user)
         db.session.commit()
         return jsonify({'message': 'User registered successfully'})
