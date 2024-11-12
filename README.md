@@ -12,6 +12,7 @@ This is my Library Manager web application. It allows users to create accounts a
 - users can change the page size of the displayed book list
 - user log in
 - user registering
+- details page for each book (only shows the id as an additional detail, not meant for production)
 - alerts
 - local database
 - user authentication
