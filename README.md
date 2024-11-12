@@ -17,7 +17,7 @@ This is my Library Manager web application. It allows users to create accounts a
 - local database
 - user authentication
 - password encryption
-- features a book ratings chart
+- features a dynamic book ratings chart
 - has 2 types of users: administrators and normal users
 - allows the users to filter and sort their libraries
 - validates input data
