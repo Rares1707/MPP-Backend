@@ -40,6 +40,7 @@ This is my Library Manager web application. It allows users to create accounts a
 
 ![image](https://github.com/user-attachments/assets/d44d9897-c13b-463d-a807-42e59fdfbb9e)
 ![image](https://github.com/user-attachments/assets/ee2b1ee5-810a-4142-90af-e632e9af1d03)
+![image](https://github.com/user-attachments/assets/42ca7a59-1df8-4165-a054-447ee4ce08b8)
 ![image](https://github.com/user-attachments/assets/82913ec9-ad4b-4cb2-9c6a-68a523b84400)
 
 
